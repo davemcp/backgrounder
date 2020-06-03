@@ -2,37 +2,50 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"log"
-	"net"
 	"os"
 
 	"github.com/urfave/cli"
 )
 
 func main() {
+
 	app := cli.NewApp()
 	app.Name = "Backgrounder CLI"
 	app.Usage = "Set the background for your machine automagically."
 
 	myFlags := []cli.Flag{
 		&cli.StringFlag{
-			Name:  "host",
-			Value: "tutorialledge.net",
+			Name:  "topic",
+			Value: "the topic of the pic you'd like",
 		},
 	}
 	app.Commands = []*cli.Command{
 		&cli.Command{
-			Name:  "ns",
-			Usage: "Looks up the nameservers for a particular host",
+			Name:  "random",
+			Usage: "Returns a random picture",
 			Flags: myFlags,
 			Action: func(c *cli.Context) error {
-				ns, err := net.LookupNS(c.String("host"))
+				unsplashResponse := unsplash(c.String("topic"))
+
+				body, err := ioutil.ReadAll(unsplashResponse.Body)
 				if err != nil {
-					return err
+					log.Fatal(err)
 				}
-				for i := 0; i < len(ns); i++ {
-					fmt.Println(ns[i].Host)
+
+				f, err := os.Create("/tmp/random.jpg")
+				if err != nil {
+					log.Fatal(err)
 				}
+				defer f.Close()
+
+				n2, err := f.Write(body)
+				if err != nil {
+					log.Fatal(err)
+				}
+				fmt.Printf("Wrote %v bytes into %v\n", n2, "/tmp/random.jpg")
+
 				return nil
 			},
 		},
